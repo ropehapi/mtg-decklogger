@@ -1,0 +1,16 @@
+services:
+  mongo:
+    # MongoDB 8+ currently fails on this host's Linux 7.0 kernel (SERVER-121912).
+    image: mongo:7.0
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+
+volumes:
+  mongo_data:
+    name: mtg-decklogger-mongo-data
