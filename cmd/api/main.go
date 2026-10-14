@@ -1,43 +1,33 @@
 package main
 
 import (
-	"context"
 	"log"
 	"net/http"
-	"os"
-	"time"
 
 	deckhttp "github.com/ropehapi/mtg-decklogger/internal/deck/adapter/inbound/http"
 	"github.com/ropehapi/mtg-decklogger/internal/deck/adapter/outbound/mongodb"
 	"github.com/ropehapi/mtg-decklogger/internal/deck/application"
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"github.com/ropehapi/mtg-decklogger/pkg/config"
+	"github.com/ropehapi/mtg-decklogger/pkg/database"
 )
 
 func main() {
-	//TODO: Segregate this connection in another file
-	mongoURI := os.Getenv("MONGO_URI")
-	if mongoURI == "" {
-		mongoURI = "mongodb://root:example@localhost:27017/?authSource=admin"
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Error loading configurations: %v", err)
 	}
 
-	client, err := mongo.Connect(options.Client().ApplyURI(mongoURI))
+	mongoConnection, err := database.ConnectMongo(cfg.MongoUri)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error connecting to Mongo database: %v", err)
 	}
 	defer func() {
-		if err := client.Disconnect(context.Background()); err != nil {
-			log.Printf("disconnect MongoDB: %v", err)
+		if err := mongoConnection.Close(); err != nil {
+			log.Printf("Error disconnecting from Mongo database: %v", err)
 		}
 	}()
 
-	pingContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := client.Ping(pingContext, nil); err != nil {
-		log.Fatal(err)
-	}
-
-	collection := client.Database("deck").Collection("deckData")
+	collection := mongoConnection.Database("deck").Collection("deckData")
 	repository := mongodb.NewRepository(collection)
 
 	createDeckUsecase := application.NewCreateDeckUsecase(repository)
@@ -50,8 +40,9 @@ func main() {
 	router.HandleFunc("POST /decks", handler.Create)
 	router.HandleFunc("GET /decks", handler.List)
 
-	log.Println("API listening on :8080")
-	if err := http.ListenAndServe(":8080", router); err != nil {
-		log.Fatal(err)
+	address := ":" + cfg.ServerPort
+	log.Printf("API listening on %s", address)
+	if err := http.ListenAndServe(address, router); err != nil {
+		log.Printf("HTTP server stopped: %v", err)
 	}
 }
