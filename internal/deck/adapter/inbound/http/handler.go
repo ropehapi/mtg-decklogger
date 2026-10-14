@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/ropehapi/mtg-decklogger/internal/deck/application"
@@ -64,7 +65,7 @@ func (handler *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, errorResponse{Message: "could not create deck"})
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Message: fmt.Sprintf("Error creating deck: %v", err.Error())})
 		return
 	}
 
@@ -78,7 +79,7 @@ func (handler *Handler) Create(w http.ResponseWriter, r *http.Request) {
 func (handler *Handler) List(w http.ResponseWriter, r *http.Request) {
 	decks, err := handler.listDecksUsecase.Execute(r.Context())
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, errorResponse{Message: "error on reading decks"})
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Message: fmt.Sprintf("Error listing decks: %v", err.Error())})
 		return
 	}
 
