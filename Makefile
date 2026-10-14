@@ -4,7 +4,7 @@ API_HOST=http://localhost
 API_PORT=8080
 
 run:
-	go run main.go
+	go run ./cmd/api
 
 build:
 	sudo docker compose build
