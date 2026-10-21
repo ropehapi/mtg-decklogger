@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ropehapi/mtg-decklogger/internal/deck/application"
 	"github.com/ropehapi/mtg-decklogger/internal/deck/domain"
+	"github.com/ropehapi/mtg-decklogger/pkg/response"
 )
 
 type CreateDeckUsecase interface {
@@ -31,18 +32,6 @@ type createDeckRequest struct {
 	Description string `json:"description"`
 }
 
-// TODO: Create default Http response struct
-type deckResponse struct {
-	Name        string `json:"name"`
-	Format      string `json:"format"`
-	Description string `json:"description"`
-}
-
-// TODO: Create default http error response struct
-type errorResponse struct {
-	Message string `json:"message"`
-}
-
 func NewHandler(createDeckUsecase CreateDeckUsecase, listDecksUsecase ListDecksUsecase) *Handler {
 	return &Handler{createDeckUsecase: createDeckUsecase, listDecksUsecase: listDecksUsecase}
 }
@@ -52,7 +41,7 @@ func (handler *Handler) Create(c *gin.Context) {
 	decoder := json.NewDecoder(c.Request.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&body); err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse{Message: "invalid request body"})
+		response.Error(c, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
@@ -62,28 +51,22 @@ func (handler *Handler) Create(c *gin.Context) {
 		Description: body.Description,
 	})
 	if errors.Is(err, domain.ErrDeckNameRequired) {
-		c.JSON(http.StatusBadRequest, errorResponse{Message: err.Error()})
+		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse{Message: fmt.Sprintf("Error creating deck: %v", err.Error())})
+		response.Error(c, http.StatusInternalServerError, fmt.Sprintf("Error creating deck: %v", err.Error()))
 		return
 	}
-
-	c.JSON(http.StatusOK, deckResponse{
-		Name:        deck.Name,
-		Format:      deck.Format,
-		Description: deck.Description,
-	})
+	
+	response.Success(c, http.StatusCreated, deck)
 }
 
 func (handler *Handler) List(c *gin.Context) {
 	decks, err := handler.listDecksUsecase.Execute(c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse{
-			Message: fmt.Sprintf("Error listing decks: %v", err.Error()),
-		})
+		response.Error(c, http.StatusInternalServerError, fmt.Sprintf("Error listing decks: %v", err.Error()))
 	}
 
-	c.JSON(http.StatusOK, decks)
+	response.Success(c, http.StatusOK, decks)
 }
