@@ -13,7 +13,7 @@ http:
     type: json
     data: |-
       {
-        "name": "Mono Green Hydras",
+        "name": "Grixis Sauron",
         "format": "Commander",
         "description": "Deck baseado em auras"
       }

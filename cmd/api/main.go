@@ -2,15 +2,18 @@ package main
 
 import (
 	"log"
-	"net/http"
 
 	deckhttp "github.com/ropehapi/mtg-decklogger/internal/deck/adapter/inbound/http"
 	"github.com/ropehapi/mtg-decklogger/internal/deck/adapter/outbound/mongodb"
 	"github.com/ropehapi/mtg-decklogger/internal/deck/application"
 	"github.com/ropehapi/mtg-decklogger/pkg/config"
 	"github.com/ropehapi/mtg-decklogger/pkg/database"
+	"github.com/gin-gonic/gin"
 )
 
+//TODO: Add structured logs
+//TODO: Add observability
+//TODO: Add swagger docs
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -35,14 +38,10 @@ func main() {
 
 	handler := deckhttp.NewHandler(createDeckUsecase, listDeckUsecase)
 
-	//TODO: Refactor to CHI or Gin, whatever fits best
-	router := http.NewServeMux()
-	router.HandleFunc("POST /decks", handler.Create)
-	router.HandleFunc("GET /decks", handler.List)
+	r := gin.Default()
+	r.POST("/decks", handler.Create)
+	r.GET("/decks", handler.List)
 
 	address := ":" + cfg.ServerPort
-	log.Printf("API listening on %s", address)
-	if err := http.ListenAndServe(address, router); err != nil {
-		log.Printf("HTTP server stopped: %v", err)
-	}
+	r.Run(address)
 }
