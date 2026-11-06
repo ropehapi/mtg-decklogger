@@ -13,8 +13,8 @@ import (
 	"github.com/ropehapi/mtg-decklogger/pkg/logger"
 )
 
-//TODO: Add observability
-//TODO: Add swagger docs
+// TODO: Add observability
+// TODO: Add swagger docs
 func main() {
 	logger.Init()
 
@@ -38,12 +38,16 @@ func main() {
 
 	createDeckUsecase := application.NewCreateDeckUsecase(repository)
 	listDeckUsecase := application.NewListDecksUsecase(repository)
+	updateDeckUsecase := application.NewUpdateDeckUsecase(repository)
+	deleteDeckUsecase := application.NewDeleteDeckUsecase(repository)
 
-	handler := deckhttp.NewHandler(createDeckUsecase, listDeckUsecase)
+	handler := deckhttp.NewHandler(createDeckUsecase, listDeckUsecase, updateDeckUsecase, deleteDeckUsecase)
 
 	r := gin.Default()
 	r.POST("/decks", handler.Create)
 	r.GET("/decks", handler.List)
+	r.PUT("/decks/:id", handler.Update)
+	r.DELETE("/decks/:id", handler.Delete)
 
 	address := ":" + cfg.ServerPort
 	r.Run(address)

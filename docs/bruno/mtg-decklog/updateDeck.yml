@@ -1,0 +1,24 @@
+info:
+  name: updateDeck
+  type: http
+  seq: 3
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/decks/6ad827ed1c211157540e762b"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Macacos me mordam",
+        "format": "Commander",
+        "description": "Deck group hug tribal de macacos"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

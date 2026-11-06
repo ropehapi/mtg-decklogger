@@ -23,6 +23,7 @@ func (uc *ListDecksUsecase) Execute(ctx context.Context) ([]domain.Deck, error) 
 	var decks []domain.Deck
 	for _, result := range results {
 		deck := domain.Deck{
+			ID:          result.ID,
 			Name:        result.Name,
 			Format:      result.Format,
 			Description: result.Description,
