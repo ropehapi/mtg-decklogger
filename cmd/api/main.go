@@ -6,8 +6,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	deckhttp "github.com/ropehapi/mtg-decklogger/internal/deck/adapter/inbound/http"
+	deckversionhttp "github.com/ropehapi/mtg-decklogger/internal/deck_version/adapter/inbound/http"
 	"github.com/ropehapi/mtg-decklogger/internal/deck/adapter/outbound/mongodb"
+	deckversionmongodb "github.com/ropehapi/mtg-decklogger/internal/deck_version/adapter/outbound/mongodb"
 	"github.com/ropehapi/mtg-decklogger/internal/deck/application"
+	deckversionapplication "github.com/ropehapi/mtg-decklogger/internal/deck_version/application"
 	"github.com/ropehapi/mtg-decklogger/pkg/config"
 	"github.com/ropehapi/mtg-decklogger/pkg/database"
 	"github.com/ropehapi/mtg-decklogger/pkg/logger"
@@ -15,6 +18,7 @@ import (
 
 // TODO: Add observability
 // TODO: Add swagger docs
+// TODO: Add unit tests
 func main() {
 	logger.Init()
 
@@ -33,22 +37,29 @@ func main() {
 		}
 	}()
 
-	collection := mongoConnection.Database("deck").Collection("deckData")
-	repository := mongodb.NewRepository(collection)
+	deckCollection := mongoConnection.Database("deck").Collection("deckData")
+	deckVersionCollection := mongoConnection.Database("deck_version").Collection("deckData")
 
-	createDeckUsecase := application.NewCreateDeckUsecase(repository)
-	listDeckUsecase := application.NewListDecksUsecase(repository)
-	updateDeckUsecase := application.NewUpdateDeckUsecase(repository)
-	deleteDeckUsecase := application.NewDeleteDeckUsecase(repository)
+	deckRepository := mongodb.NewRepository(deckCollection)
+	deckVersionRepository := deckversionmongodb.NewRepository(deckVersionCollection)
 
-	handler := deckhttp.NewHandler(createDeckUsecase, listDeckUsecase, updateDeckUsecase, deleteDeckUsecase)
+	createDeckUsecase := application.NewCreateDeckUsecase(deckRepository)
+	listDeckUsecase := application.NewListDecksUsecase(deckRepository)
+	updateDeckUsecase := application.NewUpdateDeckUsecase(deckRepository)
+	deleteDeckUsecase := application.NewDeleteDeckUsecase(deckRepository)
+
+	createDeckVersionUsecase := deckversionapplication.NewCreateDeckVersionUsecase(deckVersionRepository)
+
+	deckHandler := deckhttp.NewHandler(createDeckUsecase, listDeckUsecase, updateDeckUsecase, deleteDeckUsecase)
+	deckVersionHandler := deckversionhttp.NewHandler(createDeckVersionUsecase)
 
 	r := gin.Default()
-	r.POST("/decks", handler.Create)
-	r.GET("/decks", handler.List)
-	r.PUT("/decks/:id", handler.Update)
-	r.DELETE("/decks/:id", handler.Delete)
+	r.POST("/decks", deckHandler.Create)
+	r.GET("/decks", deckHandler.List)
+	r.PUT("/decks/:id", deckHandler.Update)
+	r.DELETE("/decks/:id", deckHandler.Delete)
 
+	r.POST("/deck_version", deckVersionHandler.Create)
 	address := ":" + cfg.ServerPort
 	r.Run(address)
 }
