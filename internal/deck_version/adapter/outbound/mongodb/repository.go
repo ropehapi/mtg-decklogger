@@ -6,7 +6,7 @@ import (
 	"github.com/ropehapi/mtg-decklogger/internal/deck_version/domain.go"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
-	// "go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 type Repository struct {
@@ -15,8 +15,8 @@ type Repository struct {
 
 type deckVersionDocument struct {
 	ID          bson.ObjectID `bson:"_id,omitempty"`
-	DeckId      string        `bson:"deck_id, omitempty"`
-	version     int           `bson:"version"`
+	DeckID      bson.ObjectID `bson:"deck_id"`
+	Version     int           `bson:"version"`
 	Description string        `bson:"description"`
 }
 
@@ -24,14 +24,33 @@ func NewRepository(collection *mongo.Collection) *Repository {
 	return &Repository{collection: collection}
 }
 
+func (repository *Repository) EnsureIndexes(ctx context.Context) error {
+	_, err := repository.collection.Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "deck_id", Value: 1},
+			{Key: "version", Value: 1},
+		},
+		Options: options.Index().SetUnique(true),
+	})
+	return err
+}
+
 func (repository *Repository) Create(ctx context.Context, deck domain.DeckVersion) error {
+	deckID, err := bson.ObjectIDFromHex(deck.DeckId)
+	if err != nil {
+		return err
+	}
+
 	document := deckVersionDocument{
-		DeckId:      deck.DeckId,
-		version:     deck.Version,
+		DeckID:      deckID,
+		Version:     deck.Version,
 		Description: deck.Description,
 	}
 
-	_, err := repository.collection.InsertOne(ctx, document)
+	_, err = repository.collection.InsertOne(ctx, document)
+	if mongo.IsDuplicateKeyError(err) {
+		return domain.ErrDeckVersionAlreadyExists
+	}
 
 	return err
 }

@@ -35,6 +35,23 @@ func (repository *Repository) Create(ctx context.Context, deck domain.Deck) erro
 	return err
 }
 
+func (repository *Repository) ExistsByID(ctx context.Context, id string) (bool, error) {
+	objectID, err := bson.ObjectIDFromHex(id)
+	if err != nil {
+		return false, err
+	}
+
+	err = repository.collection.FindOne(ctx, bson.M{"_id": objectID}).Err()
+	if err == mongo.ErrNoDocuments {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
 func (r *Repository) Find(ctx context.Context) ([]domain.Deck, error) {
 	cursor, err := r.collection.Find(ctx, bson.D{})
 	if err != nil {

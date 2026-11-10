@@ -13,9 +13,9 @@ http:
     type: json
     data: |-
       {
-        "name": "Ghalta Dinos",
+        "name": "Mono Green Gargos",
         "format": "Commander",
-        "description": "Deck baseado em auras"
+        "description": "Meu primeiro deck montado por mim"
       }
   auth: inherit
 

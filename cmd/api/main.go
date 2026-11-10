@@ -1,15 +1,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
 	"github.com/gin-gonic/gin"
 	deckhttp "github.com/ropehapi/mtg-decklogger/internal/deck/adapter/inbound/http"
+	deckmongodb "github.com/ropehapi/mtg-decklogger/internal/deck/adapter/outbound/mongodb"
+	deckapplication "github.com/ropehapi/mtg-decklogger/internal/deck/application"
 	deckversionhttp "github.com/ropehapi/mtg-decklogger/internal/deck_version/adapter/inbound/http"
-	"github.com/ropehapi/mtg-decklogger/internal/deck/adapter/outbound/mongodb"
 	deckversionmongodb "github.com/ropehapi/mtg-decklogger/internal/deck_version/adapter/outbound/mongodb"
-	"github.com/ropehapi/mtg-decklogger/internal/deck/application"
 	deckversionapplication "github.com/ropehapi/mtg-decklogger/internal/deck_version/application"
 	"github.com/ropehapi/mtg-decklogger/pkg/config"
 	"github.com/ropehapi/mtg-decklogger/pkg/database"
@@ -37,18 +38,23 @@ func main() {
 		}
 	}()
 
-	deckCollection := mongoConnection.Database("deck").Collection("deckData")
-	deckVersionCollection := mongoConnection.Database("deck_version").Collection("deckData")
+	db := mongoConnection.Database("mtg_decklogger")
+	deckCollection := db.Collection("decks")
+	deckVersionCollection := db.Collection("deck_versions")
 
-	deckRepository := mongodb.NewRepository(deckCollection)
+	deckRepository := deckmongodb.NewRepository(deckCollection)
 	deckVersionRepository := deckversionmongodb.NewRepository(deckVersionCollection)
+	if err := deckVersionRepository.EnsureIndexes(context.Background()); err != nil {
+		slog.Error(fmt.Sprintf("Error creating deck version indexes: %v", err))
+		return
+	}
 
-	createDeckUsecase := application.NewCreateDeckUsecase(deckRepository)
-	listDeckUsecase := application.NewListDecksUsecase(deckRepository)
-	updateDeckUsecase := application.NewUpdateDeckUsecase(deckRepository)
-	deleteDeckUsecase := application.NewDeleteDeckUsecase(deckRepository)
+	createDeckUsecase := deckapplication.NewCreateDeckUsecase(deckRepository)
+	listDeckUsecase := deckapplication.NewListDecksUsecase(deckRepository)
+	updateDeckUsecase := deckapplication.NewUpdateDeckUsecase(deckRepository)
+	deleteDeckUsecase := deckapplication.NewDeleteDeckUsecase(deckRepository)
 
-	createDeckVersionUsecase := deckversionapplication.NewCreateDeckVersionUsecase(deckVersionRepository)
+	createDeckVersionUsecase := deckversionapplication.NewCreateDeckVersionUsecase(deckVersionRepository, deckRepository)
 
 	deckHandler := deckhttp.NewHandler(createDeckUsecase, listDeckUsecase, updateDeckUsecase, deleteDeckUsecase)
 	deckVersionHandler := deckversionhttp.NewHandler(createDeckVersionUsecase)

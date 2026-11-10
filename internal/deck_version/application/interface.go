@@ -13,3 +13,9 @@ type DeckVersionRepository interface {
 	// Update(ctx context.Context, id string, deck domain.DeckVersion) (domain.DeckVersion, error)
 	// Delete(ctx context.Context, id string) error
 }
+
+// DeckRepository is intentionally small: deck versions only need to verify
+// that their parent deck exists.
+type DeckRepository interface {
+	ExistsByID(ctx context.Context, id string) (bool, error)
+}

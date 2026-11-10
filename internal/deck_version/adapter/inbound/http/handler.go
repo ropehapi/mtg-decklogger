@@ -8,8 +8,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ropehapi/mtg-decklogger/internal/deck_version/domain.go"
 	"github.com/ropehapi/mtg-decklogger/internal/deck_version/application"
+	"github.com/ropehapi/mtg-decklogger/internal/deck_version/domain.go"
 	"github.com/ropehapi/mtg-decklogger/pkg/response"
 )
 
@@ -66,8 +66,16 @@ func (handler *Handler) Create(c *gin.Context) {
 		Version:     body.Version,
 		Description: body.Description,
 	})
-	if errors.Is(err, domain.ErrDeckIdRequired) {
+	if errors.Is(err, domain.ErrDeckIdRequired) || errors.Is(err, domain.ErrDeckIdInvalid) {
 		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	if errors.Is(err, domain.ErrDeckNotFound) {
+		response.Error(c, http.StatusNotFound, err.Error())
+		return
+	}
+	if errors.Is(err, domain.ErrDeckVersionAlreadyExists) {
+		response.Error(c, http.StatusConflict, err.Error())
 		return
 	}
 	if err != nil {
